@@ -1,5 +1,7 @@
 import Hls from '../../src/hls';
 
+const sinon = require('sinon');
+
 /**
  * All public methods of Hls instance
  */
@@ -28,6 +30,11 @@ export default class HlsMock {
     publicMethods.forEach((methodName) => {
       this[methodName] = sinon.stub();
     });
+  }
+
+  getEventData (n) {
+    const event = this.trigger.getCall(n).args;
+    return { name: event[0], payload: event[1] };
   }
 
   /**

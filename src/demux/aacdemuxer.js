@@ -20,8 +20,9 @@ class AACDemuxer {
   }
 
   static probe (data) {
-    if (!data)
+    if (!data) {
       return false;
+    }
 
     // Check for the ADTS sync word
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
@@ -44,7 +45,7 @@ class AACDemuxer {
     let track = this._audioTrack;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
-    let pts = timestamp ? 90 * timestamp : timeOffset * 90000;
+    let pts = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
     let frameIndex = 0;
     let stamp = pts;
     let length = data.length;

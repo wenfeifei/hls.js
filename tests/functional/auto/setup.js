@@ -1,29 +1,36 @@
-const assert = require('assert');
+/* eslint-disable no-console */
+
 const webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
+// eslint-disable-next-line
 const chromedriver = require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-
 const browserConfig = { version: 'latest' };
 const onTravis = !!process.env.TRAVIS;
+const chai = require('chai');
+const expect = chai.expect;
 
 let browserDescription;
+let stream;
 
 // Setup browser config data from env vars
 (function () {
   if (onTravis) {
     let UA_VERSION = process.env.UA_VERSION;
-    if (UA_VERSION)
+    if (UA_VERSION) {
       browserConfig.version = UA_VERSION;
+    }
 
     let UA = process.env.UA;
-    if (!UA)
+    if (!UA) {
       throw new Error('No test browser name.');
+    }
 
     let OS = process.env.OS;
-    if (!OS)
+    if (!OS) {
       throw new Error('No test browser platform.');
+    }
 
     browserConfig.name = UA;
     browserConfig.platform = OS;
@@ -33,11 +40,13 @@ let browserDescription;
 
   browserDescription = browserConfig.name;
 
-  if (browserConfig.version)
+  if (browserConfig.version) {
     browserDescription += ' (' + browserConfig.version + ')';
+  }
 
-  if (browserConfig.platform)
+  if (browserConfig.platform) {
     browserDescription += ', ' + browserConfig.platform;
+  }
 })();
 
 // Launch static server
@@ -76,6 +85,10 @@ function retry (cb, numAttempts, interval) {
 
 describe('testing hls.js playback in the browser on "' + browserDescription + '"', function () {
   beforeEach(function () {
+    if (!stream) {
+      throw new Error('Stream not defined');
+    }
+
     let capabilities = {
       name: '"' + stream.description + '" on "' + browserDescription + '"',
       browserName: browserConfig.name,
@@ -83,6 +96,11 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
       version: browserConfig.version,
       commandTimeout: 90
     };
+    if (browserConfig.name === 'chrome') {
+      capabilities.chromeOptions = {
+        args: ['--autoplay-policy=no-user-gesture-required', '--disable-web-security']
+      };
+    }
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
@@ -94,12 +112,15 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    this.browser.manage().timeouts().setScriptTimeout(75000);
+    this.browser.manage().setTimeouts({ script: 75000 }).catch(function (err) {
+      console.log('setTimeouts: ' + err);
+    });
     console.log('Retrieving web driver session...');
     return this.browser.getSession().then(function (session) {
       console.log('Web driver session id: ' + session.getId());
-      if (onTravis)
+      if (onTravis) {
         console.log('Job URL: https://saucelabs.com/jobs/' + session.getId());
+      }
 
       return retry(function () {
         console.log('Loading test page...');
@@ -145,7 +166,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           callback({ code: 'loadeddata', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'loadeddata');
+        expect(result.code).to.equal('loadeddata');
       });
     };
   };
@@ -160,18 +181,18 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           window.switchToHighestLevel('next');
         };
         window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-          var currentTime = video.currentTime;
+          let currentTime = video.currentTime;
           if (data.level === window.hls.levels.length - 1) {
             console.log('[log] > switched on level:' + data.level);
             window.setTimeout(function () {
-              var newCurrentTime = video.currentTime;
+              let newCurrentTime = video.currentTime;
               console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
               callback({ code: newCurrentTime > currentTime, logs: window.logString });
             }, 2000);
           }
         });
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, true);
+        expect(result.code).to.be.true;
       });
     };
   };
@@ -183,13 +204,15 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
         window.startStream(url, config, callback);
         const video = window.video;
         video.onloadeddata = function () {
-          window.setTimeout(function () { video.currentTime = video.duration - 5; }, 5000);
+          window.setTimeout(function () {
+            video.currentTime = video.duration - 5;
+          }, 5000);
         };
         video.onseeked = function () {
           callback({ code: 'seeked', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'seeked');
+        expect(result.code).to.equal('seeked');
       });
     };
   };
@@ -201,13 +224,15 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
         window.startStream(url, config, callback);
         const video = window.video;
         video.onloadeddata = function () {
-          window.setTimeout(function () { video.currentTime = video.duration - 5; }, 5000);
+          window.setTimeout(function () {
+            video.currentTime = video.duration - 5;
+          }, 5000);
         };
         video.onended = function () {
           callback({ code: 'ended', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
+        expect(result.code).to.equal('ended');
       });
     };
   };
@@ -219,13 +244,15 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
         window.startStream(url, config, callback);
         const video = window.video;
         video.onloadeddata = function () {
-          window.setTimeout(function () { video.currentTime = video.duration; }, 5000);
+          window.setTimeout(function () {
+            video.currentTime = video.duration;
+          }, 5000);
         };
         video.onended = function () {
           callback({ code: 'ended', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
+        expect(result.code).to.equal('ended');
       });
     };
   };
@@ -252,19 +279,20 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           }
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.playing, true);
+        expect(result.playing).to.be.true;
       });
     };
   };
 
   for (let name in streams) {
-    var stream = streams[name];
+    stream = streams[name];
     let url = stream.url;
     let config = stream.config || {};
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
       it('should receive video loadeddata event for ' + stream.description, testLoadedData(url, config));
-      if (stream.abr)
+      if (stream.abr) {
         it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url, config));
+      }
 
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url, config));

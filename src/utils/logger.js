@@ -1,4 +1,6 @@
-function noop () {}
+import { getSelfScope } from './get-self-scope';
+
+function noop (...args) {}
 
 const fakeLogger = {
   trace: noop,
@@ -10,8 +12,6 @@ const fakeLogger = {
 };
 
 let exportedLogger = fakeLogger;
-
-/* globals self: false */
 
 // let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
@@ -27,14 +27,17 @@ function formatMsg (type, msg) {
   return msg;
 }
 
+const global = getSelfScope();
+
 function consolePrintFn (type) {
-  const func = self.console[type];
+  const func = global.console[type];
   if (func) {
     return function (...args) {
-      if (args[0])
+      if (args[0]) {
         args[0] = formatMsg(type, args[0]);
+      }
 
-      func.apply(self.console, args);
+      func.apply(global.console, args);
     };
   }
   return noop;
@@ -46,8 +49,9 @@ function exportLoggerFunctions (debugConfig, ...functions) {
   });
 }
 
-export var enableLogs = function (debugConfig) {
-  if (debugConfig === true || typeof debugConfig === 'object') {
+export const enableLogs = function (debugConfig) {
+  // check that console is available
+  if ((global.console && debugConfig === true) || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
       // Remove out from list here to hard-disable a log-level
       // 'trace',
@@ -69,4 +73,4 @@ export var enableLogs = function (debugConfig) {
   }
 };
 
-export var logger = exportedLogger;
+export const logger = exportedLogger;

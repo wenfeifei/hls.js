@@ -18,8 +18,9 @@ class KeyLoader extends EventHandler {
   destroy () {
     for (let loaderName in this.loaders) {
       let loader = this.loaders[loaderName];
-      if (loader)
+      if (loader) {
         loader.destroy();
+      }
     }
     this.loaders = {};
     EventHandler.prototype.destroy.call(this);
@@ -45,7 +46,10 @@ class KeyLoader extends EventHandler {
 
       let loaderContext, loaderConfig, loaderCallbacks;
       loaderContext = { url: uri, frag: frag, responseType: 'arraybuffer' };
-      loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: config.fragLoadingMaxRetry, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
+      // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
+      // key-loader will trigger an error and rely on stream-controller to handle retry logic.
+      // this will also align retry logic with fragment-loader
+      loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: 0, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
       loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this) };
       frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
     } else if (this.decryptkey) {
@@ -67,8 +71,9 @@ class KeyLoader extends EventHandler {
   loaderror (response, context) {
     let frag = context.frag,
       loader = frag.loader;
-    if (loader)
+    if (loader) {
       loader.abort();
+    }
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response });
@@ -77,8 +82,9 @@ class KeyLoader extends EventHandler {
   loadtimeout (stats, context) {
     let frag = context.frag,
       loader = frag.loader;
-    if (loader)
+    if (loader) {
       loader.abort();
+    }
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag });

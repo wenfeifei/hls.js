@@ -1,4 +1,3 @@
-let assert = require('assert');
 import BinarySearch from '../../../src/utils/binary-search';
 
 describe('binary search util', function () {
@@ -6,10 +5,11 @@ describe('binary search util', function () {
     let list = null;
     let buildComparisonFunction = function (itemToSearchFor) {
       return function (candidate) {
-        if (candidate < itemToSearchFor)
+        if (candidate < itemToSearchFor) {
           return 1;
-        else if (candidate > itemToSearchFor)
+        } else if (candidate > itemToSearchFor) {
           return -1;
+        }
 
         return 0;
       };
@@ -22,13 +22,13 @@ describe('binary search util', function () {
       for (let i = 0; i < list.length; i++) {
         let item = list[i];
         let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
-        assert.strictEqual(foundItem, item);
+        expect(foundItem).to.equal(item);
       }
     });
     it('does not find the element if it is not present', function () {
       let item = 1000;
       let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
-      assert.strictEqual(foundItem, null);
+      expect(foundItem).to.not.exist;
     });
   });
 });

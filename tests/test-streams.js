@@ -23,8 +23,9 @@ function createTestStream (url, description, live = false, abr = true, blacklist
  * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
  */
 function createTestStreamWithConfig (target, config) {
-  if (typeof target !== 'object')
+  if (typeof target !== 'object') {
     throw new Error('target should be object');
+  }
 
   const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 
@@ -35,7 +36,7 @@ function createTestStreamWithConfig (target, config) {
 
 module.exports = {
   bbb: createTestStreamWithConfig({
-    url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+    url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     description: 'Big Buck Bunny - adaptive qualities'
   },
   {
@@ -44,57 +45,61 @@ module.exports = {
   }
   ),
   bigBuckBunny480p: {
-    'url': 'https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     'description': 'Big Buck Bunny - 480p only',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   arte: {
-    'url': 'https://video-dev.github.io/streams/test_001/stream.m3u8',
+    'url': 'https://test-streams.mux.dev/test_001/stream.m3u8',
     'description': 'ARTE China,ABR',
     'live': false,
     'abr': true
   },
   deltatreDAI: {
-    'url': 'https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8',
+    'url': 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     'description': 'Ad-insertion in event stream',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
+  /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
   issue649: {
-    'url': 'http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
+    'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
     'description': 'hls.js/issues/649',
     'live': false,
     'abr': false
   },
+  */
   closedCaptions: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
     'live': false,
     'abr': false,
     'blacklist_ua': ['safari']
   },
   oceansAES: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
     'description': 'AES encrypted,ABR',
     'live': false,
     'abr': true
   },
+  /*
   bbbAES: {
-    'url': 'http://streambox.fr/playlists/sample_aes/index.m3u8',
+    'url': 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
   },
+  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
@@ -124,15 +129,17 @@ module.exports = {
     'blacklist_ua': ['safari', 'internet explorer']
   },
   offset_pts: {
-    'url': 'https://video-dev.github.io/streams/pts_shift/master.m3u8',
+    'url': 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     'description': 'DK Turntable, PTS shifted by 2.3s',
     'live': false,
     'abr': false
   },
+  /*
   uspHLSAteam: createTestStream(
     'http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199',
     'A-Team movie trailer - HLS by Unified Streaming Platform'
   ),
+  */
   angelOneShakaWidevine: createTestStreamWithConfig({
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
     description: 'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
@@ -142,5 +149,39 @@ module.exports = {
     widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
-  )
+  ),
+  audioOnlyMultipleLevels: {
+    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'description': 'Multiple non-alternate audio levels',
+    'live': false,
+    'abr': false
+  },
+  pdtDuplicate: {
+    url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
+    description: 'Stream with duplicate sequential PDT values'
+  },
+  pdtLargeGap: {
+    url: 'https://playertest.longtailvideo.com/adaptive/boxee/playlist.m3u8',
+    description: 'PDTs with large gaps following discontinuities'
+  },
+  pdtBadValues: {
+    url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
+    description: 'PDTs with bad values'
+  },
+  pdtOneValue: {
+    url: 'https://playertest.longtailvideo.com/adaptive/aviion/manifest.m3u8',
+    description: 'One PDT, no discontinuities'
+  },
+  noTrackIntersection: {
+    url: 'https://s3.amazonaws.com/bob.jwplayer.com/%7Ealex/123633/new_master.m3u8',
+    description: 'Audio/video track PTS values do not intersect; 10 second start gap'
+  },
+  // altAudioNoVideoCodecSignaled: {
+  //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
+  //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
+  // },
+  altAudioAndTracks: {
+    url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
+    description: 'Alternate audio tracks, and multiple VTT tracks'
+  }
 };

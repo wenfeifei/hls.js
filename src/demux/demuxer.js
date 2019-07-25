@@ -1,34 +1,33 @@
+import { EventEmitter } from 'eventemitter3';
+import * as work from 'webworkify-webpack';
+
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import EventEmitter from 'events';
-import work from 'webworkify-webpack';
-import { getMediaSource } from '../helper/mediasource-helper';
+import { getMediaSource } from '../utils/mediasource-helper';
+import { getSelfScope } from '../utils/get-self-scope';
 
-const MediaSource = getMediaSource();
+import { Observer } from '../observer';
+
+// see https://stackoverflow.com/a/11237259/589493
+const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
+const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
 class Demuxer {
   constructor (hls, id) {
     this.hls = hls;
     this.id = id;
-    // observer setup
-    const observer = this.observer = new EventEmitter();
+
+    const observer = this.observer = new Observer();
     const config = hls.config;
-    observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
-    };
 
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-
-    let forwardMessage = function (ev, data) {
+    const forwardMessage = (ev, data) => {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
       hls.trigger(ev, data);
-    }.bind(this);
+    };
 
     // forward events to main thread
     observer.on(Event.FRAG_DECRYPTED, forwardMessage);
@@ -55,13 +54,16 @@ class Demuxer {
         w = this.w = work(require.resolve('../demux/demuxer-worker.js'));
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
-        w.onerror = function (event) { hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } }); };
+        w.onerror = function (event) {
+          hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+        };
         w.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
-        logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        logger.warn('Error in worker:', err);
+        logger.error('Error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-          URL.revokeObjectURL(w.objectURL);
+          global.URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new DemuxerInline(observer, typeSupported, config, vendor);
         this.w = undefined;
@@ -84,7 +86,7 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    let observer = this.observer;
+    const observer = this.observer;
     if (observer) {
       observer.removeAllListeners();
       this.observer = null;
@@ -93,18 +95,20 @@ class Demuxer {
 
   push (data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     const w = this.w;
-    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
+    const timeOffset = Number.isFinite(frag.startPTS) ? frag.startPTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
     const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
     const nextSN = lastFrag && (frag.sn === (lastFrag.sn + 1));
     const contiguous = !trackSwitch && nextSN;
-    if (discontinuity)
+    if (discontinuity) {
       logger.log(`${this.id}:discontinuity detected`);
+    }
 
-    if (trackSwitch)
+    if (trackSwitch) {
       logger.log(`${this.id}:switch detected`);
+    }
 
     this.frag = frag;
     if (w) {
@@ -112,8 +116,9 @@ class Demuxer {
       w.postMessage({ cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS }, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
-      if (demuxer)
+      if (demuxer) {
         demuxer.push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
+      }
     }
   }
 
@@ -123,13 +128,14 @@ class Demuxer {
     switch (data.event) {
     case 'init':
       // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-      URL.revokeObjectURL(this.w.objectURL);
+      global.URL.revokeObjectURL(this.w.objectURL);
       break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
     case Event.FRAG_PARSING_DATA:
       data.data.data1 = new Uint8Array(data.data1);
-      if (data.data2)
+      if (data.data2) {
         data.data.data2 = new Uint8Array(data.data2);
+      }
 
       /* falls through */
     default:
